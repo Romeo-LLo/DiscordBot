@@ -1,12 +1,8 @@
-from ntpath import join
-from pickle import FALSE
-from unicodedata import category
 import discord
 import os
 from dotenv import load_dotenv
 from utils import _get_category, create_team_channel_and_move_member
 
-# load_dotenv('---.env')
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
