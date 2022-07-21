@@ -1,10 +1,14 @@
 from ntpath import join
+from pickle import FALSE
 from unicodedata import category
 import discord
 import os
 from dotenv import load_dotenv
+from utils import _get_category, create_team_channel_and_move_member
 
-load_dotenv('---.env')
+# load_dotenv('---.env')
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 client = discord.Client()
 
@@ -19,9 +23,7 @@ async def on_message(message):
 
     if message.content.startswith('$hello'):
         await message.channel.send('Hello!')
-        
-        
-
+           
 
 @client.event
 async def on_voice_state_update(member, before, after):
@@ -29,15 +31,18 @@ async def on_voice_state_update(member, before, after):
     # Join to create
     personal_channel_name = f"{member.name}'s channel"
     
-    if str(after.channel) == 'join to create':
+    if str(after.channel) == 'Join to create':
         if str(after) != str(before):
             guild = member.guild            
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(connect=False),
                 member: discord.PermissionOverwrite(read_messages=True)
             }
-            get_category = discord.utils.get(guild.categories, id=994513375247745075)  # get category first
-            personal_channel = await guild.create_voice_channel(name=personal_channel_name, overwrites=overwrites, category=get_category)
+            personal_room_category_name = 'Personal room hub'
+
+            personal_category = await _get_category(guild, personal_room_category_name)
+
+            personal_channel = await guild.create_voice_channel(name=personal_channel_name, overwrites=overwrites, category=personal_category)
 
             await member.move_to(personal_channel)
             
@@ -50,7 +55,7 @@ async def on_voice_state_update(member, before, after):
 
     # Waiting room, once the number of members is enough, move to game room, first come first served. 
     # Rememebr if you leave in the meanwhile, you will need to wait again.
-    game_room_name = 'Ready game room'
+    game_room_name = 'Game room'
     
     if str(after.channel) == 'Waiting room':
         if str(after) != str(before):  
@@ -59,36 +64,23 @@ async def on_voice_state_update(member, before, after):
             members = waiting_room.members #finds members connected to the channel
             joined_time = [member.joined_at for member in members]
             sorted_index = sorted(range(len(members)), key=lambda k: joined_time[k])
-
+            
+            game_room_category_name = 'Game room hub'
+  
             number_of_members_to_go = 2
             if len(members) >= number_of_members_to_go:
                 firstN_members = [members[i] for i in sorted_index]
-                firstN_role = await guild.create_role(name='firstN_members_role')
+                await create_team_channel_and_move_member(guild, firstN_members, game_room_category_name)
 
-                overwrites = {
-                    # guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-                    guild.default_role: discord.PermissionOverwrite(connect=False),
-                    firstN_role: discord.PermissionOverwrite(read_messages=True, send_messages= True)
-                }
                 
-                get_category = discord.utils.get(guild.categories, id=994513375247745075)  # get category first
-                game_room = await guild.create_voice_channel(name=game_room_name, overwrites=overwrites, category=get_category, user_limit=number_of_members_to_go)
-                for member in firstN_members:
-                    await member.add_roles(firstN_role)
-                    await member.move_to(game_room)
-                
-    if str(before.channel) == game_room_name:
+    if str(before.channel).split()[0] == "Team":
         if str(after) != str(before):
             if len(before.channel.members) == 0:
                 guild = member.guild
-                game_room = discord.utils.get(guild.channels, name=game_room_name)
+                game_room = discord.utils.get(guild.channels, name=str(before.channel))
                 await game_room.delete()    
 
 
 
-        
 
-
-
-
-client.run("OTk0NTE0MTMwMzM5OTA1NTQ2.GtiJFd.J-cwN9RK0ujfyBLldnCye6ekAJt9DhW0_pIabs")
+client.run(TOKEN)
