@@ -71,6 +71,10 @@ async def on_voice_state_update(member, before, after):
                 
     if str(before.channel).split()[0] == "Team":
         if str(after) != str(before):
+            # delete sb's team role if sb leave
+            team_role = discord.utils.get(member.guild.roles, name="{} role".format(str(before.channel)))
+            await member.remove_roles(team_role)    
+
             if len(before.channel.members) == 0:
                 guild = member.guild
                 game_room = discord.utils.get(guild.channels, name=str(before.channel))
