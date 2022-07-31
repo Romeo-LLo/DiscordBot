@@ -50,3 +50,37 @@ class DatabaseManager:
     
     def insert_game_document(self, game_document):
         self.game_collection.insert_one(game_document)
+        
+    def query_game_document(self, game_name):
+        filterQ = {"game": game_name}
+        projectionQ = {"_id": 0}
+        cursor = self.game_collection.find_one(filterQ, projectionQ)
+
+        return cursor
+    
+    def replace_game_document(self, game_name, game_document):
+        filterQ = {"game": game_name}
+        self.game_collection.replace_one(filterQ, game_document)
+        
+    def count_game_collection(self):
+        count = self.game_collection.count_documents({})
+        return count
+    
+    def update_player_collection(self):
+        # filterQ = {}
+        # projectionQ = {'_id': 0, 'player_list': 1}
+        # all_player_list = self.game_collection.find(filterQ, projectionQ)
+        # duplicate_list = []
+        # for player_list in all_player_list:
+        #     duplicate_list += player_list
+        
+        # player_set = set(duplicate_list)
+        
+        # for player in player_set:
+        #     filterQ = {}
+        #     projectionQ = {'_id': 0, 'player_list': 1}
+    def delete_game_collection(self):
+        self.game_collection.drop()
+            
+
+        

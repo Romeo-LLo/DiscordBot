@@ -31,28 +31,29 @@ async def on_message(message):
 
             if image_uploaded.filename.endswith(type):
                 game_num = ''.join(s for s in message.channel.name if s.isdigit())
-                waited_game_result_channel = discord.utils.get(guild.channels, name=f'waited丨Game {game_num} result')
 
-
-                # game_members_detail = message.channel.members
-                # game_members = [f"{member.name}#{member.discriminator}" for member in game_members_detail]
-                # game_members_return_format = [f"{member.name}#{member.discriminator} : \n" for member in game_members_detail]
-
-                gameResult = discord.Embed(title=f'Game {game_num} result', description=f'Image uploaded by {message.author.name}')
-                gameResult.add_field(name="Players", value=', '.join(game_members[1:]), inline=False) # bot is also inside the text channel, so excluded
-                gameResult.set_image(url=f"attachment://{result_img.filename}")
-                gameResult.add_field(name="Admin return format", value='$score\n' + ' '.join(game_members_return_format[1:]), inline=False)
-                gameResult.add_field(name="Example return", value="$score \n Player1 : 100 \n Player2 : 200", inline=False)
+                waited_game_result_channel_name = f'waited丨game-{game_num}-result'
+                waited_game_result_channel = discord.utils.get(guild.text_channels, name=waited_game_result_channel_name)
+                game_document = extract_game_document_from_db(f'Game {game_num}')
+                game_players = game_document['player_list']
 
                 result_img = await image_uploaded.to_file()
-
-                await admin_channel.send(embed=gameResult, file=result_img)
-                await message.channel.send('Thank you. Result image has been sent to Admin.')
+                gameResult = discord.Embed(title=f'Game {game_num} result', description=f'Image uploaded by {message.author.name}#{message.author.discriminator}')
+                gameResult.add_field(name="Players", value=', '.join(game_players), inline=False) 
+                gameResult.set_image(url=f"attachment://{result_img.filename}")
+                await waited_game_result_channel.send(embed=gameResult, file=result_img)
                 
+                unchecked_game_result_channel_name = f'unchecked丨game-{game_num}-result' 
+                await waited_game_result_channel.edit(name=unchecked_game_result_channel_name)
+                
+                await message.channel.send('Thank you. Result image has been sent, waiting for double check. Once done, this channel will be removed')
+                
+                unchecked_game_result_channel = discord.utils.get(guild.text_channels, name=unchecked_game_result_channel_name)
+                await wait_for_double_check_and_update_db(client, unchecked_game_result_channel, game_document)
+
                 await delay_delete_channel(10, message.channel)
 
                 return
-    # if message.content.startswith('$score') and message.channel.name == 'admin-channel':
         
 
         
@@ -127,7 +128,7 @@ async def on_voice_state_update(member, before, after):
             members = waiting_room.members 
             sorted_member_index = get_sorted_member_index(members)
   
-            number_of_members_to_go = 1
+            number_of_members_to_go = 2
             if len(members) >= number_of_members_to_go:
                 firstN_members = [members[i] for i in sorted_member_index]
                 await create_game_channel_and_move_member(guild, firstN_members, game_room_category_name, game_result_category_name)
