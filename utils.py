@@ -1,6 +1,10 @@
 import discord
 import asyncio
 from dbmanager import DatabaseManager
+import matplotlib.pyplot as plt
+from discord.ext import commands
+from datetime import datetime
+import os
 
 async def _get_category(guild: discord.Guild, CATEGORY_NAME: str) -> discord.CategoryChannel:
     """
@@ -207,12 +211,15 @@ def extract_game_document_from_db(game_name: str) -> list:
 def save_game_info_to_db(game_name: str, game_players: list[discord.Member]) -> None:
     game_players_by_Name = [f"{member.name}#{member.discriminator}" for member in game_players]
     
-    player_info = {}
+    player_info = []
     for player in game_players_by_Name:
-        player_info[player] = {
+        
+        player_info.append({
+            'player_name': player,
             'score': None,
-            'status': None         
-        }
+            'status': None               
+        })
+
     game_document = {
         'game': game_name,
         'player_list': game_players_by_Name,
@@ -248,14 +255,14 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     winner_index = [score_list.index(highest_score)]
     for i in range(len(score_list)):
         if i in winner_index:
-            game_document['player_info'][game_players[i]]['status'] = 'win'
+            game_document['player_info'][i]['status'] = 'win'
             rank_score = score_look_up_table(score_list[i], 'win')
-            game_document['player_info'][game_players[i]]['score'] = rank_score
+            game_document['player_info'][i]['score'] = rank_score
 
         else:
-            game_document['player_info'][game_players[i]]['status'] = 'lose'
+            game_document['player_info'][i]['status'] = 'lose'
             rank_score = score_look_up_table(score_list[i], 'lose')
-            game_document['player_info'][game_players[i]]['score'] = rank_score
+            game_document['player_info'][i]['score'] = rank_score
 
 
     db_manager = DatabaseManager('discord_bot')
@@ -290,5 +297,33 @@ def score_look_up_table(score: int, win_or_lose: str) -> int:
         
     return rank_score
         
+        
+async def display_scoreboard(channel: discord.channel):
+    
+    db_manager = DatabaseManager('discord_bot')
+    score_board = db_manager.show_score_board()     
+    player = []
+    total_score = []
+    for each in score_board:
+        player.append(each['_id'])
+        total_score.append(each['total_score'])
+
+    scoreboard = 'scoreboard.png'
+    now = datetime.now()
+    now = now.replace(microsecond = 0)        
+    fig = plt.figure(figsize = (10, 5))
+    plt.bar(player, total_score, width = 0.1)
+    plt.xlabel("Player")
+    plt.ylabel("Total score")
+    plt.title("Score board ")
+    plt.savefig(scoreboard)
+    
+    board_file=discord.File(scoreboard)
+    baord = discord.Embed(title=f'Score board', description=f'Updated time: {now}')
+    baord.set_image(url=f"attachment://{scoreboard}")
+    await channel.send(embed=baord, file=board_file)
+    
+    if os.path.exists(scoreboard):
+        os.remove(scoreboard)
 
     

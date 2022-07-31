@@ -1,9 +1,16 @@
+from tokenize import Token
 import discord
 import os
 from dotenv import load_dotenv
 from utils import * 
 from utils import _get_category
 import asyncio
+import matplotlib.pyplot as plt
+from discord.ext import commands
+from datetime import datetime
+
+
+
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -11,17 +18,24 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 # intents = discord.Intents.default()  # Allow the use of custom intents
 # intents.members = True
 client = discord.Client()
+# client = commands.Bot(command_prefix='$')
 
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
 
+
+        
 @client.event
 async def on_message(message):
 
     if message.author == client.user:
         return
-
+    
+    if message.content.startswith('$scoreboard'): 
+        await display_scoreboard(message.channel)
+       
+        
     # After the game ends, each game text channel must upload a result image  
     if message.channel.category.name == 'Game hub':
         guild = client.get_guild(994513374606004276) 
@@ -54,10 +68,7 @@ async def on_message(message):
                 await delay_delete_channel(10, message.channel)
 
                 return
-        
-
-        
-
+               
 
 @client.event
 async def on_voice_state_update(member, before, after):
