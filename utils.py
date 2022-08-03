@@ -253,16 +253,20 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
 
     highest_score = max(score_list)
     winner_index = [score_list.index(highest_score)]
+    rank_score_list = []
     for i in range(len(score_list)):
         if i in winner_index:
             game_document['player_info'][i]['status'] = 'win'
             rank_score = score_look_up_table(score_list[i], 'win')
             game_document['player_info'][i]['score'] = rank_score
+            rank_score_list.append(rank_score)
 
         else:
             game_document['player_info'][i]['status'] = 'lose'
             rank_score = score_look_up_table(score_list[i], 'lose')
             game_document['player_info'][i]['score'] = rank_score
+            rank_score_list.append(rank_score)
+
 
 
     db_manager = DatabaseManager('discord_bot')
@@ -270,6 +274,9 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     recorded_game_result_channel_name = f'recorded丨{game_name}-result'
     await unchecked_channel.send(f"Score has been recorded!")
     await unchecked_channel.edit(name=recorded_game_result_channel_name)
+    await post_score_result(client, game_players, game_name, rank_score_list)
+
+    
     
     
 def score_look_up_table(score: int, win_or_lose: str) -> int:
@@ -326,4 +333,25 @@ async def display_scoreboard(channel: discord.channel):
     if os.path.exists(scoreboard):
         os.remove(scoreboard)
 
-    
+
+async def post_score_result(client, game_players, game_name, rank_score_list):
+    db_manager = DatabaseManager('discord_bot')
+    guild = client.get_guild(994513374606004276) 
+    score_channel = discord.utils.get(guild.text_channels, name='score')
+
+    scoreResult = discord.Embed(title=f'Ranked Scoring System', description=game_name)
+
+    for i, player in enumerate(game_players):
+        total_score = db_manager.extract_player_score(player)
+        for score in total_score:
+            total_score = score['total_score']  
+        rankscore = rank_score_list[i]
+        if rankscore >= 0:
+            add_or_minus = '+'
+        else:
+            add_or_minus = '-'
+
+        scoreResult.add_field(name=f"Player {i+1}", value=f'<@{player}> {add_or_minus}{abs(rankscore)} [{total_score - rankscore} -> {total_score}]', inline=False) 
+
+    await score_channel.send(embed=scoreResult)
+

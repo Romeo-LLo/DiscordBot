@@ -87,5 +87,25 @@ class DatabaseManager:
                     }
                 ])
         return cursor
+    
+    def extract_player_score(self, player_name):
+        cursor = self.game_collection.aggregate([
+                    {
+                        '$unwind': {'path': "$player_info"}
+                    },
+                    {
+                        '$match': {'player_info.player_name': player_name}
+                    },
+                    {
+                        '$group': {
+                            '_id': '$player_info.player_name',
+                            'total_score': {'$sum': '$player_info.score'},
+                        }
+                    }
+                ])
+
+        return cursor
+        
+    
             
         
