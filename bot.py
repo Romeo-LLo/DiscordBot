@@ -14,11 +14,10 @@ from datetime import datetime
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-
+Guild_ID = os.getenv('GUILD_ID')
 # intents = discord.Intents.default()  # Allow the use of custom intents
 # intents.members = True
 client = discord.Client()
-# client = commands.Bot(command_prefix='$')
 
 @client.event
 async def on_ready():
@@ -39,34 +38,23 @@ async def on_message(message):
     # After the game ends, each game text channel must upload a result image  
     if message.channel.category.name == 'Game hub':
         guild = client.get_guild(994513374606004276) 
+        
         image_uploaded = message.attachments[0]
         img_type = ['.jpg','.png','.jpeg']
         for type in img_type:
 
             if image_uploaded.filename.endswith(type):
                 game_num = ''.join(s for s in message.channel.name if s.isdigit())
-
-                waited_game_result_channel_name = f'waited丨game-{game_num}-result'
-                waited_game_result_channel = discord.utils.get(guild.text_channels, name=waited_game_result_channel_name)
                 game_document = extract_game_document_from_db(f'Game {game_num}')
-                game_players = game_document['player_list']
+                author = message.author
 
-                result_img = await image_uploaded.to_file()
-                gameResult = discord.Embed(title=f'Game {game_num} result', description=f'Image uploaded by {message.author.name}#{message.author.discriminator}')
-                gameResult.add_field(name="Players", value=', '.join(game_players), inline=False) 
-                gameResult.set_image(url=f"attachment://{result_img.filename}")
-                await waited_game_result_channel.send(embed=gameResult, file=result_img)
-                
-                unchecked_game_result_channel_name = f'unchecked丨game-{game_num}-result' 
-                await waited_game_result_channel.edit(name=unchecked_game_result_channel_name)
-                
+                await forward_img_to_result_channel(guild, game_num, author, image_uploaded)
                 await message.channel.send('Thank you. Result image has been sent, waiting for double check. Once done, this channel will be removed')
                 
+                unchecked_game_result_channel_name = f'unchecked丨game-{game_num}-result'                 
                 unchecked_game_result_channel = discord.utils.get(guild.text_channels, name=unchecked_game_result_channel_name)
                 await wait_for_double_check_and_update_db(client, unchecked_game_result_channel, game_document)
-
                 await delay_delete_channel(10, message.channel)
-
                 return
                
 
@@ -119,8 +107,7 @@ async def on_voice_state_update(member, before, after):
             team_role = discord.utils.get(member.guild.roles, name="{} role".format(str(before.channel)))
             # Todo: wait a tolerance time if member leave, but if he join again, then cancel the remove role  
             # maybe need a flag 
-            # tolerance_time = 
-            # await asyncio.sleep(tolerance_time)
+
             await member.remove_roles(team_role)    
 
             if len(before.channel.members) == 0:

@@ -2,9 +2,13 @@ import discord
 import asyncio
 from dbmanager import DatabaseManager
 import matplotlib.pyplot as plt
-from discord.ext import commands
 from datetime import datetime
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
+Guild_ID = os.getenv('GUILD_ID')
 
 async def _get_category(guild: discord.Guild, CATEGORY_NAME: str) -> discord.CategoryChannel:
     """
@@ -58,11 +62,7 @@ async def create_team_channel_and_move_member(guild: discord.Guild, team_members
     for member in team_members:
         await member.add_roles(team_role)
         await member.move_to(team_channel)
-
-    
-    
-         
-             
+      
 async def create_game_channel_and_move_member(guild: discord.Guild, game_players: list[discord.Member], CATEGORY_NAME: str, result_CATEGORY_NAME) -> None:
     """Create the game's voice channel."""
 
@@ -118,7 +118,6 @@ async def create_game_channel_and_move_member(guild: discord.Guild, game_players
         
     save_game_info_to_db(game_name, game_players)
 
-
 async def create_team_name_filling_gap(team_category: discord.CategoryChannel) -> str:
     channels = team_category.channels
 
@@ -140,8 +139,6 @@ async def create_game_name_successive(game_result_category: discord.CategoryChan
     # result_channels = game_result_category.channels
     # number = len(result_channels) + 1
     return f'Game {count+1}'
-     
-
 
 async def delay_delete_channel(time_in_sec: int, channel: discord.channel) -> None:
     await channel.send(f'This channel will be closed in {time_in_sec} seconds.')
@@ -172,71 +169,10 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     recorded_game_result_channel_name = f'recorded丨{game_name}-result'
     await unchecked_channel.send(f"Score has been recorded!")
     await unchecked_channel.edit(name=recorded_game_result_channel_name)
-    
              
-def get_sorted_member_index(members: list[discord.Member]) -> list:
-    joined_time = [member.joined_at for member in members]
-    sorted_index = sorted(range(len(members)), key=lambda k: joined_time[k])
-    return sorted_index
 
-def save_game_info_to_db(game_name: str, game_players: list[discord.Member]) -> None:
-    game_players_by_Name = [f"{member.name}#{member.discriminator}" for member in game_players]
-    
-    player_info = {}
-    for player in game_players_by_Name:
-        player_info[player] = {
-            'score': None,
-            'status': None         
-        }
-    game_document = {
-        'game': game_name,
-        'player_list': game_players_by_Name,
-        'player_info': player_info           
-        } 
-        
-    db_manager = DatabaseManager('discord_bot')
-    db_manager.insert_game_document(game_document)
-
-
-def extract_game_document_from_db(game_name: str) -> list:
     
 
-    db_manager = DatabaseManager('discord_bot')
-    game_document = db_manager.query_game_document(game_name)
-    
-    return game_document
-
-
-
-def save_game_info_to_db(game_name: str, game_players: list[discord.Member]) -> None:
-    game_players_by_Name = [f"{member.name}#{member.discriminator}" for member in game_players]
-    
-    player_info = []
-    for player in game_players_by_Name:
-        
-        player_info.append({
-            'player_name': player,
-            'score': None,
-            'status': None               
-        })
-
-    game_document = {
-        'game': game_name,
-        'player_list': game_players_by_Name,
-        'player_info': player_info           
-        } 
-        
-    db_manager = DatabaseManager('discord_bot')
-    db_manager.insert_game_document(game_document)
-
-
-def extract_game_document_from_db(game_name: str) -> list:
-    
-
-    db_manager = DatabaseManager('discord_bot')
-    game_document = db_manager.query_game_document(game_name)
-    
-    return game_document
 
 async def wait_for_double_check_and_update_db(client: discord.client, unchecked_channel: discord.TextChannel, game_document: dict) -> None:
     game_players = game_document['player_list']
@@ -275,37 +211,10 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     await unchecked_channel.send(f"Score has been recorded!")
     await unchecked_channel.edit(name=recorded_game_result_channel_name)
     await post_score_result(client, game_players, game_name, rank_score_list)
+    
 
-    
-    
-    
-def score_look_up_table(score: int, win_or_lose: str) -> int:
-    win_rank_score = [35, 30, 30, 25, 25, 20, 20, 15, 15, 15, 15, 10, 5]
-    lose_rank_score = [-10, -10, -15, -15, -20, -20, -25, -25, -30, -30, -30, -30, -35]
-    rank = score // 100
-    
-    if rank < 11:
-        if win_or_lose == 'win':
-            rank_score = win_rank_score[rank]
-        if win_or_lose == 'lose':
-            rank_score = lose_rank_score[rank]
-    elif rank >= 11 and rank < 16:
-        if win_or_lose == 'win':
-            rank_score = win_rank_score[-2]
-        if win_or_lose == 'lose':
-            rank_score = lose_rank_score[-2]
-    elif rank >= 16:
-        if win_or_lose == 'win':
-            rank_score = win_rank_score[-1]
-        if win_or_lose == 'lose':
-            rank_score = lose_rank_score[-1]
-    else:
-        rank_score = 0
         
-    return rank_score
-        
-        
-async def display_scoreboard(channel: discord.channel):
+async def display_scoreboard(channel: discord.channel) -> None:
     
     db_manager = DatabaseManager('discord_bot')
     score_board = db_manager.show_score_board()     
@@ -333,10 +242,9 @@ async def display_scoreboard(channel: discord.channel):
     if os.path.exists(scoreboard):
         os.remove(scoreboard)
 
-
-async def post_score_result(client, game_players, game_name, rank_score_list):
+async def post_score_result(client: discord.client, game_players: list, game_name: str, rank_score_list: list) -> None:
     db_manager = DatabaseManager('discord_bot')
-    guild = client.get_guild(994513374606004276) 
+    guild = client.get_guild(Guild_ID) 
     score_channel = discord.utils.get(guild.text_channels, name='score')
 
     scoreResult = discord.Embed(title=f'Ranked Scoring System', description=game_name)
@@ -355,3 +263,104 @@ async def post_score_result(client, game_players, game_name, rank_score_list):
 
     await score_channel.send(embed=scoreResult)
 
+async def forward_img_to_result_channel(guild: discord.guild, game_num: str, author, image_uploaded) -> None:
+    waited_game_result_channel_name = f'waited丨game-{game_num}-result'
+    waited_game_result_channel = discord.utils.get(guild.text_channels, name=waited_game_result_channel_name)
+    
+    game_document = extract_game_document_from_db(f'Game {game_num}')
+    game_players = game_document['player_list']
+    
+    result_img = await image_uploaded.to_file()
+    gameResult = discord.Embed(title=f'Game {game_num} result', description=f'Image uploaded by {author.name}#{author.discriminator}')
+    gameResult.add_field(name="Players", value=', '.join(game_players), inline=False) 
+    gameResult.set_image(url=f"attachment://{result_img.filename}")
+    await waited_game_result_channel.send(embed=gameResult, file=result_img)
+    
+    unchecked_game_result_channel_name = f'unchecked丨game-{game_num}-result' 
+    await waited_game_result_channel.edit(name=unchecked_game_result_channel_name)
+                
+                
+                
+                
+def get_sorted_member_index(members: list[discord.Member]) -> list:
+    joined_time = [member.joined_at for member in members]
+    sorted_index = sorted(range(len(members)), key=lambda k: joined_time[k])
+    return sorted_index
+
+def save_game_info_to_db(game_name: str, game_players: list[discord.Member]) -> None:
+    game_players_by_Name = [f"{member.name}#{member.discriminator}" for member in game_players]
+    
+    player_info = {}
+    for player in game_players_by_Name:
+        player_info[player] = {
+            'score': None,
+            'status': None         
+        }
+    game_document = {
+        'game': game_name,
+        'player_list': game_players_by_Name,
+        'player_info': player_info           
+        } 
+        
+    db_manager = DatabaseManager('discord_bot')
+    db_manager.insert_game_document(game_document)
+
+def extract_game_document_from_db(game_name: str) -> list:
+    
+
+    db_manager = DatabaseManager('discord_bot')
+    game_document = db_manager.query_game_document(game_name)
+    
+    return game_document
+
+def save_game_info_to_db(game_name: str, game_players: list[discord.Member]) -> None:
+    game_players_by_Name = [f"{member.name}#{member.discriminator}" for member in game_players]
+    
+    player_info = []
+    for player in game_players_by_Name:
+        
+        player_info.append({
+            'player_name': player,
+            'score': None,
+            'status': None               
+        })
+
+    game_document = {
+        'game': game_name,
+        'player_list': game_players_by_Name,
+        'player_info': player_info           
+        } 
+        
+    db_manager = DatabaseManager('discord_bot')
+    db_manager.insert_game_document(game_document)
+
+def extract_game_document_from_db(game_name: str) -> list:
+    db_manager = DatabaseManager('discord_bot')
+    game_document = db_manager.query_game_document(game_name)
+    
+    return game_document
+
+def score_look_up_table(score: int, win_or_lose: str) -> int:
+    win_rank_score = [35, 30, 30, 25, 25, 20, 20, 15, 15, 15, 15, 10, 5]
+    lose_rank_score = [-10, -10, -15, -15, -20, -20, -25, -25, -30, -30, -30, -30, -35]
+    rank = score // 100
+    
+    if rank < 11:
+        if win_or_lose == 'win':
+            rank_score = win_rank_score[rank]
+        if win_or_lose == 'lose':
+            rank_score = lose_rank_score[rank]
+    elif rank >= 11 and rank < 16:
+        if win_or_lose == 'win':
+            rank_score = win_rank_score[-2]
+        if win_or_lose == 'lose':
+            rank_score = lose_rank_score[-2]
+    elif rank >= 16:
+        if win_or_lose == 'win':
+            rank_score = win_rank_score[-1]
+        if win_or_lose == 'lose':
+            rank_score = lose_rank_score[-1]
+    else:
+        rank_score = 0
+        
+    return rank_score
