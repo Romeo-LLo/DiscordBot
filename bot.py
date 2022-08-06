@@ -37,8 +37,8 @@ async def on_message(message):
         
     # After the game ends, each game text channel must upload a result image  
     if message.channel.category.name == 'Game hub':
-        guild = client.get_guild(994513374606004276) 
         
+        guild = client.get_guild(int(Guild_ID))        
         image_uploaded = message.attachments[0]
         img_type = ['.jpg','.png','.jpeg']
         for type in img_type:
@@ -53,7 +53,7 @@ async def on_message(message):
                 
                 unchecked_game_result_channel_name = f'unchecked丨game-{game_num}-result'                 
                 unchecked_game_result_channel = discord.utils.get(guild.text_channels, name=unchecked_game_result_channel_name)
-                await wait_for_double_check_and_update_db(client, unchecked_game_result_channel, game_document)
+                await wait_for_double_check_and_update_db(client, guild, unchecked_game_result_channel, game_document)
                 await delay_delete_channel(10, message.channel)
                 return
                

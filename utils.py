@@ -174,7 +174,7 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     
 
 
-async def wait_for_double_check_and_update_db(client: discord.client, unchecked_channel: discord.TextChannel, game_document: dict) -> None:
+async def wait_for_double_check_and_update_db(client: discord.client, guild: discord.guild, unchecked_channel: discord.TextChannel, game_document: dict) -> None:
     game_players = game_document['player_list']
     game_name = game_document['game']
 
@@ -210,7 +210,7 @@ async def wait_for_double_check_and_update_db(client: discord.client, unchecked_
     recorded_game_result_channel_name = f'recorded丨{game_name}-result'
     await unchecked_channel.send(f"Score has been recorded!")
     await unchecked_channel.edit(name=recorded_game_result_channel_name)
-    await post_score_result(client, game_players, game_name, rank_score_list)
+    await post_score_result(guild, game_players, game_name, rank_score_list)
     
 
         
@@ -242,9 +242,8 @@ async def display_scoreboard(channel: discord.channel) -> None:
     if os.path.exists(scoreboard):
         os.remove(scoreboard)
 
-async def post_score_result(client: discord.client, game_players: list, game_name: str, rank_score_list: list) -> None:
+async def post_score_result(guild: discord.guild, game_players: list, game_name: str, rank_score_list: list) -> None:
     db_manager = DatabaseManager('discord_bot')
-    guild = client.get_guild(Guild_ID) 
     score_channel = discord.utils.get(guild.text_channels, name='score')
 
     scoreResult = discord.Embed(title=f'Ranked Scoring System', description=game_name)
