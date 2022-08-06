@@ -25,7 +25,6 @@ A discord bot that provides functions of join to create, room distribution and g
             > 1. **waited丨game # result** : Players haven't upload image.
             > 2. **unchecked丨game # result** : Admin havn't enter the score.
             > 3. **recorded丨game # result** : Everything done.
-            > ![Status](/sample_image/status.png)
 
 
 
